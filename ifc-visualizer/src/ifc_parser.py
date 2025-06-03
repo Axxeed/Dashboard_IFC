@@ -1,6 +1,8 @@
 import ifcopenshell
 import ifcopenshell.util.element
 import logging
+import time # For timestamp in OwnerHistory
+from ifcopenshell import guid # For creating GUIDs
 
 # Configure basic logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -45,7 +47,7 @@ def get_object_types(ifc_file: ifcopenshell.file) -> list[str]:
     logging.info(f"Found {len(sorted_types)} unique object types.")
     return sorted_types
 
-def get_elements_by_type(ifc_file: ifcopenshell.file, object_type: str) -> list[ifcopenshell.entity_instance]:
+def get_elements_by_type(ifc_file: ifcopenshell.file, object_type: str) -> list:
     """
     Retrieves all elements of a specific type from the IFC file.
 
@@ -109,32 +111,24 @@ def get_element_properties(element) -> dict:
     return properties
 
 if __name__ == '__main__':
-    import time # For timestamp in OwnerHistory
-    from ifcopenshell import guid # For creating GUIDs
-
     # Example Usage (requires an IFC file for testing)
-    # Create a dummy IFC file for basic testing if one doesn't exist
-    # This is a very minimal IFC file, actual testing needs a real one.
+    # This section is for direct testing of the parser.
 
     logging.info("Starting IFC Parser module example usage...")
 
-    # Attempt to load a test file if available (e.g., from a known path)
-    # For automated testing, this path might need to be adapted or file created.
-    test_file_path = "test.ifc" # Assume a test file might be in the root or a specific test_data folder
+    # This path assumes the script is run from /app directory
+    # and test.ifc will be created/looked for in /app/test.ifc
+    test_file_path = "test.ifc"
 
-    # Create a minimal dummy IFC for basic structural tests if no test file is found
     try:
         with open(test_file_path, 'r') as f:
             logging.info(f"Using existing test file: {test_file_path}")
     except FileNotFoundError:
         logging.info(f"Test file {test_file_path} not found. Creating a dummy IFC file for basic testing.")
-        # Create an IFC2X3 file; this is often the default or can be specified.
         dummy_ifc = ifcopenshell.file(schema="IFC2X3")
 
-        # A new file should have a default IfcOwnerHistory.
         owner_history = dummy_ifc.by_type("IfcOwnerHistory")
         if not owner_history:
-            # Fallback: If no default OwnerHistory, create one (as before)
             person = dummy_ifc.createIfcPerson()
             organization = dummy_ifc.createIfcOrganization()
             person_and_organization = dummy_ifc.createIfcPersonAndOrganization(person, organization, None)
@@ -148,15 +142,10 @@ if __name__ == '__main__':
         else:
             owner_history = owner_history[0]
 
-        # Add a project
         project = dummy_ifc.createIfcProject(guid.new(), OwnerHistory=owner_history, Name="Test Project")
-        # Add a site
         site = dummy_ifc.createIfcSite(guid.new(), OwnerHistory=owner_history, Name="Test Site")
-        # Add a building
         building = dummy_ifc.createIfcBuilding(guid.new(), OwnerHistory=owner_history, Name="Test Building")
-        # Add a wall (as an example element)
         wall = dummy_ifc.createIfcWall(guid.new(), OwnerHistory=owner_history, Name="Test Wall")
-        # Create a dummy property set
         prop_values = [
             dummy_ifc.createIfcPropertySingleValue("DummyProperty", None, dummy_ifc.createIfcText("DummyValue"), None)
         ]
@@ -186,14 +175,13 @@ if __name__ == '__main__':
         else:
             logging.info("No IfcWall type found in the IFC file to test get_elements_by_type and get_element_properties further.")
 
-        # Test with a non-existent type
         logging.info("-" * 30)
         non_existent_elements = get_elements_by_type(ifc_file_object, "IfcNonExistentType")
         logging.info(f"Elements of IfcNonExistentType (should be 0): {len(non_existent_elements)}")
 
-        # Test properties of a project element (usually has some)
         if "IfcProject" in object_types:
              logging.info("-" * 30)
+             # Corrected function name from get_elements__by_type to get_elements_by_type
              project_elements = get_elements_by_type(ifc_file_object, "IfcProject")
              if project_elements:
                   project_props = get_element_properties(project_elements[0])
